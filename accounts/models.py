@@ -99,7 +99,7 @@ class User(AbstractUser, PermissionsMixin):
     
     def save(self, *args, **kwargs):
         if self.avatar:
-            self.avatar = get_thumbnail(self.avatar, '200x200', quality=99, format="JPEG")
+            self.avatar = get_thumbnail(self.avatar, '200x200', quality=99, format="JPEG").url
         super(User, self).save(*args, **kwargs)
 
 
