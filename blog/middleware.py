@@ -19,7 +19,7 @@ class SaveIPAddressMiddleware:
             ip_address = IPAddress.objects.create(ip_address = ip)
             ip_address.save()
         
-        request.user.ip_address = ip_address
+        request.ip_address = ip_address
         
         response = self.get_response(request)
         

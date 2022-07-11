@@ -1,12 +1,17 @@
+from requests import post
 from rest_framework import status, views, generics
 from rest_framework.response import Response
+from rest_framework.permissions import IsAuthenticated
 
 from .permissions import (
     IsAuthenticatedAndVerified,
 )
 from .serializers import (
     CategorySerializer,
-    PostSerializer
+    PostSerializer,
+    CommentSerializer,
+    CommentLikeSerializer,
+    CommentShowSerializer,
 )
 from .models import (
     Category,
@@ -34,6 +39,22 @@ class PostDetailView(views.APIView):
             return Response({"error": "post does not exists"}, status=status.HTTP_404_NOT_FOUND)
         
         serializer = PostSerializer(post)
+        comments = serializer.data.get("comments")
+        for comment in comments:
+            if 'is_replied' in comment and comment.get("is_replied"):
+                if "comment_replied" in comment and comment.get("comment_replied"):
+                    comment_replied = comment.get("comment_replied")
+                    comment_replied_id = comment_replied.get("id")
+                    for _ in comments:
+                        if _.get("id") == comment_replied_id:
+                            primary_comment = _
+                            primary_comment['replies'] = []
+                            break
+                    primary_comment['replies'].append(comment)
+                    print(primary_comment['replies'])
+        ip_address = request.ip_address
+        if ip_address not in post.hits.all():
+            post.hits.add(ip_address)
         return Response(serializer.data)
 
 class PostCategoryListView(views.APIView):
@@ -54,8 +75,107 @@ class CategoryListView(views.APIView):
 
 class LikeView(views.APIView):
     permission_classes = [IsAuthenticatedAndVerified]
-    def post(self, request):
-        pass
+    def post(self, request, slug):
+        try:
+            post = Post.objects.get(status='p', slug=slug)
+        except Post.DoesNotExist:
+            return Response({"error": "post does not exists"}, status=status.HTTP_404_NOT_FOUND)
+
+        if request.user not in post.likes.all():
+            post.likes.add(request.user)
+            post.save()
+            serializer = PostSerializer(post)
+            data = serializer.data
+            data['liked']='post liked successfully'
+        else:
+            post.likes.remove(request.user)
+            post.save()
+            serializer = PostSerializer(post)
+            data = serializer.data
+            data['unliked']='post unliked successfully'
+        
+        return Response(data)
+
 
 class CommentView(views.APIView):
     permission_classes = [IsAuthenticatedAndVerified]
+    
+    def post(self, request, slug):
+        try:
+            post = Post.objects.get(slug=slug, status='p')
+        except Post.DoesNotExist:
+            return Response({"error": "post does not exists"}, status=status.HTTP_404_NOT_FOUND)
+        serializer = CommentSerializer(data=request.data)
+        if serializer.is_valid():
+            comment = serializer.save(user=request.user)
+            post.comments.add(comment)
+            data = {}
+            post_serializer = PostSerializer(post)
+            data['post'] = post_serializer.data
+            data['comment'] = serializer.data
+            data['comment']['id'] = comment.id
+            data['comment']['user'] = comment.user.username
+            if 'is_replied' in serializer.validated_data and serializer.validated_data.get('is_replied'):
+                data['comment']['user_replied'] = comment.user_replied.username
+            return Response(data, status=status.HTTP_201_CREATED)
+        else:
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        
+
+class CommentListView(views.APIView):
+    def get(self, request, slug):
+        try:
+            post = Post.objects.get(slug=slug, status='p')
+        except Post.DoesNotExist:
+            return Response({"error": "post does not exists"}, status=status.HTTP_404_NOT_FOUND)
+        
+        comments = post.comments.all()
+        serializer = CommentShowSerializer(comments, many=True)
+        return Response(serializer.data)
+    
+class CommentLikeView(views.APIView):
+    permission_classes = [IsAuthenticatedAndVerified]
+    def post(self, request):
+        user = request.user
+        serializer = CommentLikeSerializer(data=request.data)
+        if serializer.is_valid():
+            data = {}
+            id = serializer.validated_data.get('id')
+            try:
+                comment = Comment.objects.get(pk=id)
+            except Comment.DoesNotExist:
+                return Response({"error": "comment does not exists"}, status=status.HTTP_404_NOT_FOUND)
+            data['comment'] = CommentShowSerializer(comment).data
+            if user not in comment.likes.all():
+                comment.likes.add(user)
+                comment.save()
+                data['status'] = "liked"
+            else:
+                comment.likes.remove()
+                comment.save()
+                data['status'] = "unliked"
+            return Response(data)
+        else:
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+class UserLikeListView(views.APIView):
+    permission_classes = [IsAuthenticated]
+    
+    def get(self, request):
+        user = request.user
+        posts = Post.objects.filter(likes__in=user)
+        
+        serializer = PostSerializer(posts, many=True)
+        
+        return Response(serializer.data)
+
+class UserCommentListView(views.APIView):
+    permission_classes = [IsAuthenticated]
+    
+    def get(self, request):
+        user = request.user
+        comments = Post.objects.filter(comments__user = user)
+        
+        serializer = PostSerializer(comments, many=True)
+        
+        return Response(serializer.data)

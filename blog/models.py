@@ -2,7 +2,11 @@ from django.db import models
 from django.core.exceptions import ValidationError
 from django.utils import timezone
 from accounts.models import User
+from datetime import timedelta
 # from .models import Comment
+
+def create_editable_time():
+    return timezone.now() + timedelta(days=2)
 
 # Create your managers here.
 
@@ -46,13 +50,29 @@ class Comment(models.Model):
     user = models.ForeignKey(User, related_name='comments', on_delete=models.CASCADE)
     text = models.TextField(max_length=200)
     is_replied = models.BooleanField(default=False)
-    user_replied = models.ForeignKey(User, related_name='user_replied_comments', on_delete=models.CASCADE)
+    user_replied = models.ForeignKey(User, related_name='user_replied_comments', on_delete=models.CASCADE, blank=True, null=True)
+    comment_replied = models.ForeignKey("self", default=None, null=True, blank=True, on_delete=models.SET_NULL, related_name='replied_comment')
+    created = models.DateTimeField(auto_now_add=True)
+    updated = models.DateTimeField(auto_now=True)
+    editable_time = models.DateTimeField(default=create_editable_time)
+    is_edited = models.BooleanField(default=False)
+    likes = models.ManyToManyField(User, related_name='comment_likes', blank=True)
+    
+    def is_editable(self):
+        if self.created < self.editable_time:
+            return True
+        return False
     
     def clean(self):
         if self.is_replied:
             if not self.user_replied:
                 raise ValidationError("user_replied is required.")
+            if not self.comment_replied:
+                raise ValidationError("comment_replied is required.")
         return super().clean()
+
+    def __str__(self):
+        return self.text
 
 class Post(models.Model):
     STATUS_CHOICES = (
