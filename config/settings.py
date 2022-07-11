@@ -46,6 +46,7 @@ INSTALLED_APPS = [
     'corsheaders',
     'accounts',
     'blog',
+    'sorl.thumbnail',
 ]
 
 MIDDLEWARE = [
@@ -199,3 +200,4 @@ EMAIL_HOST_USER = config("EMAIL_HOST_USER")
 EMAIL_HOST_PASSWORD = config("EMAIL_HOST_PASSWORD")
 
 DRF_RECAPTCHA_SECRET_KEY="6LfbHNogAAAAANJYRwcc4NHDtnsHMshMG37yXDo_"
+THUMBNAIL_FORCE_OVERWRITE = True
