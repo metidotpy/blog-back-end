@@ -20,6 +20,7 @@ urlpatterns = [
     path('admin/', admin.site.urls),
     path('api/accounts/', include('accounts.urls')),
     path("api/blog/", include("blog.urls")),
+    path("api/hidepanel/", include("blog_admin.urls")),
 ]
 
 from django.conf import settings
