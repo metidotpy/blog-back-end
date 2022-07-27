@@ -12,6 +12,7 @@ from .serializers import (
     CommentSerializer,
     CommentLikeSerializer,
     CommentShowSerializer,
+    CommentUpdateSerializer,
 )
 from .models import (
     Category,
@@ -41,12 +42,12 @@ class PostDetailView(views.APIView):
         serializer = PostSerializer(post)
         comments = serializer.data.get("comments")
         for comment in comments:
+            # print(comment)
             if 'is_replied' in comment and comment.get("is_replied"):
                 if "comment_replied" in comment and comment.get("comment_replied"):
-                    comment_replied = comment.get("comment_replied")
-                    comment_replied_id = comment_replied.get("id")
+                    comment_replied = comment.get("comment_replied")    
                     for _ in comments:
-                        if _.get("id") == comment_replied_id:
+                        if _.get("id") == comment_replied:
                             primary_comment = _
                             primary_comment['replies'] = []
                             break
@@ -179,3 +180,32 @@ class UserCommentListView(views.APIView):
         serializer = PostSerializer(comments, many=True)
         
         return Response(serializer.data)
+
+class CommentUpdateView(views.APIView):
+    permission_classes = [IsAuthenticated]
+    def put(self, request, pk):
+        try:
+            comment = Comment.objects.get(pk = pk, user = request.user)
+        except Comment.DoesNotExist:
+            return Response({"error": "comment does not found"}, status=status.HTTP_404_NOT_FOUND)
+        
+        serializer = CommentUpdateSerializer(comment, data=request.data)
+        if serializer.is_valid():
+            if comment.is_editable():
+                comment.is_edited = True
+                comment.save()
+                serializer.save()
+                return Response(serializer.data)
+            else:
+                return Response({"error": "You can't edit this comment, edit time is expired"}, status=status.HTTP_400_BAD_REQUEST)
+        else:
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    
+    def delete(self, request, pk):
+        try:
+            comment = Comment.objects.get(pk = pk, user = request.user)
+        except Comment.DoesNotExist:
+            return Response({"error": "comment does not found"}, status=status.HTTP_404_NOT_FOUND)
+        
+        comment.delete()
+        return Response({"message": "deleted"}, status =status.HTTP_204_NO_CONTENT)

@@ -12,4 +12,5 @@ urlpatterns = [
     path("comment/like/", views.CommentLikeView.as_view(), name='comment_like'),
     path("like/user/", views.UserLikeListView.as_view(), name='like_list'),
     path("comment/user/", views.UserCommentListView.as_view(), name='comment_list'),
+    path("comment/update/<int:pk>/", views.CommentUpdateView.as_view(), name="comment_update")
 ]

@@ -59,7 +59,7 @@ class Comment(models.Model):
     likes = models.ManyToManyField(User, related_name='comment_likes', blank=True)
     
     def is_editable(self):
-        if self.created < self.editable_time:
+        if timezone.now() < self.editable_time:
             return True
         return False
     
@@ -76,7 +76,7 @@ class Comment(models.Model):
 
 class Post(models.Model):
     STATUS_CHOICES = (
-        ('d', 'declined'),
+        ('b', 'declined'),
         ('p', 'published'),
         ('i', 'investigation'),
         ('d', 'draft'),

@@ -8,6 +8,11 @@ from .models import (
 from rest_framework.fields import CurrentUserDefault
 
 
+class CommentUpdateSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Comment
+        fields = ['text']
+
 class CommentLikeSerializer(serializers.ModelSerializer):
     # likes = serializers.StringRelatedField(many=True, read_only=True, allow_null=True)
     id = serializers.IntegerField()
@@ -21,7 +26,7 @@ class CommentReplySerializer(serializers.ModelSerializer):
     likes = serializers.StringRelatedField(read_only=True, many=True, allow_null=True)
     class Meta:
         model = Comment
-        fields = ['id', 'user', 'text', 'likes', 'likes_count']
+        fields = ['id', 'user', 'text', 'likes', 'likes_count', 'editable_time', 'is_edited', "is_editable"]
 
 class CommentShowSerializer(serializers.ModelSerializer):
     user = serializers.StringRelatedField(read_only=True)
@@ -31,14 +36,14 @@ class CommentShowSerializer(serializers.ModelSerializer):
     likes = serializers.StringRelatedField(read_only=True, many=True, allow_null=True)
     class Meta:
         model = Comment
-        fields = ['id', 'user', 'text', 'is_replied', 'user_replied', 'comment_replied', 'likes', 'likes_count']
+        fields = ['id', 'user', 'text', 'is_replied', 'user_replied', 'comment_replied', 'likes', 'likes_count', 'editable_time', 'is_edited', "is_editable"]
 
 class CommentSerializer(serializers.ModelSerializer):
     user = serializers.StringRelatedField(read_only=True)
     user_replied = serializers.StringRelatedField()
     class Meta:
         model = Comment
-        fields = ['id', 'user', 'text', 'is_replied', 'user_replied', 'comment_replied']
+        fields = ['id', 'user', 'text', 'is_replied', 'user_replied', 'comment_replied', 'editable_time', 'is_edited', "is_editable"]
     
     def save(self, user):
         user=user
